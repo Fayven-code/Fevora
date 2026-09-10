@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaInstagram,
   FaSnapchatGhost,
@@ -10,6 +11,27 @@ import fevenImage from "./assets/feven.jpeg";
 
 function App() {
   const [showTopButton, setShowTopButton] = useState(false);
+
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    console.log("Form submitted:", formData);
+  };
 
   useEffect(() => {
     const cards = document.querySelectorAll(".reveal-card");
@@ -491,7 +513,7 @@ function App() {
         </h2>
 
         <a
-          href="mailto:hello@fevora.com"
+          href="#" onClick={(e) => e.preventDefault()}
           className="contact-button"
         >
           Let's Talk →
@@ -661,19 +683,15 @@ function App() {
 
           {/* CONTACT */}
           <div className="footer-column">
-
             <h4>CONTACT</h4>
 
-            <a href="#" onClick={(e) => e.preventDefault()}>
-              hello@fevora.com
-            </a>
+            <p>Have a question?</p>
 
-            <span className="footer-location">
-              Digital-first
-              <br />
-              Worldwide
-            </span>
+            <Link to="/contact" className="footer-contact-link">
+              Contact / Inquiry →
+            </Link>
 
+            <p>Digital-first Worldwide</p>
           </div>
 
         </div>
