@@ -4,6 +4,7 @@ function Contact() {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
+    subject: "",
     message: "",
   });
 
@@ -51,13 +52,15 @@ function Contact() {
       }
 
       setStatus(
-        data.message || "Your message has been received. We'll be in touch soon."
+        data.message ||
+          "Your message has been received. We'll be in touch soon."
       );
       setStatusType("success");
 
       setFormData({
         full_name: "",
         email: "",
+        subject: "",
         message: "",
       });
     } catch (error) {
@@ -94,6 +97,7 @@ function Contact() {
         onSubmit={handleSubmit}
       >
 
+        {/* FULL NAME */}
         <div className="form-group">
           <label htmlFor="full_name">
             Full Name
@@ -111,6 +115,7 @@ function Contact() {
           />
         </div>
 
+        {/* EMAIL */}
         <div className="form-group">
           <label htmlFor="email">
             Email
@@ -128,6 +133,25 @@ function Contact() {
           />
         </div>
 
+        {/* SUBJECT */}
+        <div className="form-group">
+          <label htmlFor="subject">
+            Subject
+          </label>
+
+          <input
+            type="text"
+            id="subject"
+            name="subject"
+            placeholder="What is your message about?"
+            value={formData.subject}
+            onChange={handleChange}
+            required
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {/* MESSAGE */}
         <div className="form-group">
           <label htmlFor="message">
             Message

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   FaInstagram,
   FaSnapchatGhost,
@@ -15,6 +14,7 @@ function App() {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
+    subject: "",
     message: "",
   });
 
@@ -27,10 +27,42 @@ function App() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Form submitted:", formData);
+    console.log("FORM DATA BEING SENT:", formData);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error);
+        return;
+      }
+
+      alert(data.message);
+
+      // Clear the form after successful submission
+      setFormData({
+        full_name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+
+    } catch (error) {
+      console.error("Error:", error);
+
+      alert("Unable to send your message. Please try again.");
+    }
   };
 
   useEffect(() => {
@@ -88,7 +120,7 @@ function App() {
           <a href="#solutions">Solutions</a>
           <a href="#technology">Technology</a>
           <a href="#about">About</a>
-          <a href="#contact">Contact</a>
+          <a href="#inquiry">Contact</a>
         </div>
 
         <a href="#contact" className="nav-button">
@@ -502,7 +534,7 @@ function App() {
 
 
       {/* =========================
-          CONTACT
+          START A PROJECT
       ========================= */}
       <section id="contact">
 
@@ -513,7 +545,8 @@ function App() {
         </h2>
 
         <a
-          href="#" onClick={(e) => e.preventDefault()}
+          href="#"
+          onClick={(e) => e.preventDefault()}
           className="contact-button"
         >
           Let's Talk →
@@ -522,6 +555,69 @@ function App() {
         <p className="contact-email">
           hello@fevora.com
         </p>
+
+      </section>
+
+
+      {/* =========================
+          CONTACT / INQUIRY
+      ========================= */}
+      <section id="inquiry" className="inquiry-section">
+
+        <p>CONTACT / INQUIRY</p>
+
+        <h2>
+          Have a question? We'd love to hear from you.
+        </h2>
+
+        <p className="inquiry-description">
+          Tell us a little about what you have in mind and
+          we'll get back to you.
+        </p>
+
+        <form onSubmit={handleSubmit} className="inquiry-form">
+
+          <input
+            type="text"
+            name="full_name"
+            placeholder="Your Name"
+            value={formData.full_name}
+            onChange={handleChange}
+            required
+          />
+
+          <input
+            type="email"
+            name="email"
+            placeholder="Your Email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+
+          <input
+            type="text"
+            name="subject"
+            placeholder="Subject"
+            value={formData.subject}
+            onChange={handleChange}
+            required
+          />
+
+          <textarea
+            name="message"
+            placeholder="Your Message"
+            value={formData.message}
+            onChange={handleChange}
+            rows="6"
+            required
+          ></textarea>
+
+          <button type="submit">
+            Send Message →
+          </button>
+
+        </form>
 
       </section>
 
@@ -687,9 +783,9 @@ function App() {
 
             <p>Have a question?</p>
 
-            <Link to="/contact" className="footer-contact-link">
+            <a href="#inquiry" className="footer-contact-link">
               Contact / Inquiry →
-            </Link>
+            </a>
 
             <p>Digital-first Worldwide</p>
           </div>
