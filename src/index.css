@@ -2049,3 +2049,132 @@ scroll-behavior: auto;
     text-align: center;
   }
 }
+
+/* =========================
+   REGISTER PAGE
+========================= */
+
+.register-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(49, 92, 255, 0.18), transparent 35%),
+    radial-gradient(circle at 85% 80%, rgba(169, 111, 114, 0.12), transparent 35%),
+    #050608;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.register-container {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(14, 17, 22, 0.94);
+  border: 1px solid rgba(76, 125, 255, 0.2);
+  border-radius: 16px;
+  padding: 30px 32px;
+  box-sizing: border-box;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.register-header h1 {
+  font-family: "Playfair Display", serif;
+  color: #f7f4ef;
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+.register-header p {
+  color: #aeb4c0;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.register-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  color: #e5d4b5;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: #0a0c10;
+  border: 1px solid #252a35;
+  border-radius: 8px;
+  color: #f7f4ef;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.form-group input::placeholder {
+  color: #626977;
+}
+
+.form-group input:focus {
+  border-color: #4c7dff;
+  box-shadow: 0 0 0 3px rgba(76, 125, 255, 0.12);
+}
+
+.register-container button {
+  margin-top: 3px;
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  background: #315cff;
+  color: white;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.register-container button:hover {
+  background: #4c7dff;
+  transform: translateY(-2px);
+}
+
+.success-message,
+.error-message {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.success-message {
+  color: #8fd3a8;
+}
+
+.error-message {
+  color: #d98f92;
+}
+
+.auth-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}

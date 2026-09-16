@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaInstagram,
   FaSnapchatGhost,
@@ -121,6 +122,11 @@ function App() {
           <a href="#technology">Technology</a>
           <a href="#about">About</a>
           <a href="#inquiry">Contact</a>
+        </div>
+
+        <div className="auth-links">
+          <Link to="/login">Log In</Link>
+          <Link to="/register">Register</Link>
         </div>
 
         <a href="#contact" className="nav-button">

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Content() {
+    const navigate = useNavigate();
   const [content, setContent] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -27,7 +29,11 @@ function Content() {
   // Get content from backend
   const fetchContent = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/content");
+      const response = await fetch("http://localhost:5000/api/content", {
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       const data = await response.json();
 
       setContent(data.reverse());
@@ -64,6 +70,7 @@ function Content() {
         method: method,
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(formData),
       });
@@ -127,6 +134,9 @@ function Content() {
         `http://localhost:5000/api/content/${id}`,
         {
           method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
       );
 
@@ -174,6 +184,16 @@ function Content() {
         <p className="content-eyebrow">INTERNAL CONTENT</p>
 
         <h1>Content Management</h1>
+
+        <button
+            onClick={() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                navigate("/");
+            }}
+        >
+            Log Out
+        </button>
 
         <p className="content-intro">
           Manage Fevora's digital content, services, and published
