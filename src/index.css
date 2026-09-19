@@ -2178,3 +2178,225 @@ scroll-behavior: auto;
   gap: 20px;
   align-items: center;
 }
+
+/* ================================
+   CUSTOMER DASHBOARD
+================================ */
+
+.dashboard-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(49, 92, 255, 0.22),
+      transparent 70%
+    ),
+    #0D111A;
+  color: #F7F4EF;
+  padding: 45px 7%;
+}
+
+.dashboard-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Header */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+  margin-bottom: 25px;
+}
+
+.dashboard-eyebrow {
+  color: #4c7dff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.dashboard-header h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 38px;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+
+.dashboard-header > div > p:last-child {
+  color: #a7a9b0;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Logout */
+
+.dashboard-logout-button {
+  background: transparent;
+  border: 1px solid #315cff;
+  color: #f7f4ef;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.dashboard-logout-button:hover {
+  background: #315cff;
+}
+
+/* Cards */
+
+.dashboard-card {
+  background: #151A24;
+  border: 1px solid #252C3A;
+  border-radius: 14px;
+  padding: 22px 25px;
+  margin-bottom: 15px;
+}
+
+.dashboard-card-heading {
+  margin-bottom: 18px;
+}
+
+.dashboard-card-heading p {
+  color: #4c7dff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.dashboard-card-heading h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Account Information */
+
+.dashboard-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.dashboard-info div {
+  padding: 13px 16px;
+  background: #101621;
+  border: 1px solid #252C3A;
+  border-radius: 8px;
+}
+
+.dashboard-info span {
+  display: block;
+  color: #8c9099;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.dashboard-info strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Form */
+
+.dashboard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dashboard-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dashboard-input-group label {
+  color: #c7c9cf;
+  font-size: 14px;
+}
+
+.dashboard-input-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  background: #0D111A;
+  border: 1px solid #2A3140;
+  border-radius: 6px;
+  color: #f7f4ef;
+  font-size: 15px;
+  outline: none;
+  transition: 0.3s ease;
+}
+
+.dashboard-input-group input:focus {
+  border-color: #4c7dff;
+}
+
+/* Save Button */
+
+.dashboard-save-button {
+  width: fit-content;
+  background: #315cff;
+  border: none;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s ease;
+}
+
+.dashboard-save-button:hover {
+  background: #4c7dff;
+  transform: translateY(-1px);
+}
+
+/* Messages */
+
+.dashboard-card .success-message {
+  margin-top: 20px;
+}
+
+.dashboard-card .error-message {
+  margin-top: 20px;
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+  .dashboard-page {
+    padding: 50px 5%;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+  }
+
+  .dashboard-header h1 {
+    font-size: 36px;
+  }
+
+  .dashboard-info {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-card {
+    padding: 25px;
+  }
+
+  .dashboard-logout-button {
+    width: 100%;
+  }
+
+  .dashboard-save-button {
+    width: 100%;
+  }
+}

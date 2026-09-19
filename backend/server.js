@@ -45,6 +45,16 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireCustomer(req, res, next) {
+  if (req.user.role !== "user") {
+    return res.status(403).json({
+      error: "Customer access required.",
+    });
+  }
+
+  next();
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -60,6 +70,7 @@ db.exec(`
     email TEXT NOT NULL,
     subject TEXT NOT NULL,
     message TEXT NOT NULL,
+    user_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -109,6 +120,19 @@ if (!hasSubject) {
   db.exec(`
     ALTER TABLE contacts
     ADD COLUMN subject TEXT NOT NULL DEFAULT ''
+  `);
+}
+
+const contactColumns = db.prepare("PRAGMA table_info(contacts)").all();
+
+const hasUserId = contactColumns.some(
+  (column) => column.name === "user_id"
+);
+
+if (!hasUserId) {
+  db.exec(`
+    ALTER TABLE contacts
+    ADD COLUMN user_id INTEGER
   `);
 }
 
@@ -263,12 +287,28 @@ app.post("/api/contact", (req, res) => {
     }
 
     // Save contact to database
+    const existingUser = db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .get(email);
+
     const insert = db.prepare(`
-      INSERT INTO contacts (full_name, email, subject, message)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO contacts (
+        full_name,
+        email,
+        subject,
+        message,
+        user_id
+      )
+      VALUES (?, ?, ?, ?, ?)
     `);
 
-    insert.run(full_name, email, subject, message);
+    insert.run(
+      full_name,
+      email,
+      subject,
+      message,
+      existingUser ? existingUser.id : null
+    );
 
     // Successful response
     res.status(201).json({
@@ -360,6 +400,163 @@ app.post("/api/login", async (req, res) => {
     });
   }
 });
+
+app.get(
+  "/api/customer/profile",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      const user = db
+        .prepare(`
+          SELECT id, full_name, email, role, created_at
+          FROM users
+          WHERE id = ?
+        `)
+        .get(req.user.userId);
+
+      if (!user) {
+        return res.status(404).json({
+          error: "User not found.",
+        });
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error("Profile fetch error:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve profile.",
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/customer/profile",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      let { full_name, email } = req.body;
+
+      full_name = full_name?.trim();
+      email = email?.trim().toLowerCase();
+
+      if (!full_name || !email) {
+        return res.status(400).json({
+          error: "Full name and email are required.",
+        });
+      }
+
+      if (full_name.length > 100) {
+        return res.status(400).json({
+          error: "Full name must be 100 characters or less.",
+        });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          error: "Please enter a valid email address.",
+        });
+      }
+
+      const existingUser = db
+        .prepare(`
+          SELECT id
+          FROM users
+          WHERE email = ? AND id != ?
+        `)
+        .get(email, req.user.userId);
+
+      if (existingUser) {
+        return res.status(409).json({
+          error: "An account with this email already exists.",
+        });
+      }
+
+      const result = db
+        .prepare(`
+          UPDATE users
+          SET full_name = ?, email = ?
+          WHERE id = ?
+        `)
+        .run(full_name, email, req.user.userId);
+
+      if (result.changes === 0) {
+        return res.status(404).json({
+          error: "User not found.",
+        });
+      }
+
+      const updatedUser = db
+        .prepare(`
+          SELECT id, full_name, email, role, created_at
+          FROM users
+          WHERE id = ?
+        `)
+        .get(req.user.userId);
+
+      res.json({
+        message: "Profile updated successfully.",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+
+      res.status(500).json({
+        error: "Unable to update profile.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/customer/project",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      console.log("LOGGED IN USER ID:", req.user.userId);
+
+      const allContacts = db
+        .prepare("SELECT id, email, subject, user_id FROM contacts")
+        .all();
+
+      console.log("CONTACTS:", allContacts);
+      const users = db
+        .prepare("SELECT id, full_name, email, role FROM users")
+        .all();
+
+      console.log("USERS:", users);
+      const project = db
+        .prepare(`
+          SELECT id, subject, message, created_at
+          FROM contacts
+          WHERE email = ?
+          ORDER BY id DESC
+          LIMIT 1
+        `)
+        .get(req.user.email);
+
+      if (!project) {
+        return res.status(404).json({
+          error: "No project request found.",
+        });
+      }
+
+      res.json(project);
+    } catch (error) {
+      console.error("Project fetch error:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve project.",
+      });
+    }
+  }
+);
 
 // Get all content items
 

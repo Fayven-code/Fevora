@@ -52,14 +52,13 @@ function Login() {
         JSON.stringify(data.user)
       );
 
+      setMessage("Login successful!");
+
       if (data.user.role === "admin") {
         navigate("/content");
       } else {
-        navigate("/");
+        navigate("/dashboard");
       }
-
-      setMessage("Login successful!");
-      navigate("/content");
 
     } catch (error) {
       console.error("Login error:", error);

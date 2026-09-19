@@ -7,6 +7,8 @@ import Content from "./Content";
 import Register from "./Register";
 import Login from "./Login";
 import AdminRoute from "./AdminRoute";
+import CustomerDashboard from "./CustomerDashboard";
+import CustomerRoute from "./CustomerRoute";
 import "./index.css";
 
 createRoot(document.getElementById("root")).render(
@@ -17,6 +19,7 @@ createRoot(document.getElementById("root")).render(
         <Route path="/content" element={<AdminRoute><Content /></AdminRoute>} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<CustomerRoute><CustomerDashboard /></CustomerRoute>} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
