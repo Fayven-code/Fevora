@@ -101,6 +101,18 @@ db.exec(`
   )
 `);
 
+// Create services table
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS services (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
 // Add role column if the existing database doesn't have it
 const userColumns = db.prepare("PRAGMA table_info(users)").all();
 const hasRole = userColumns.some((column) => column.name === "role");
@@ -699,6 +711,156 @@ app.delete("/api/content/:id", authenticateToken, requireAdmin, (req, res) => {
 
     res.status(500).json({
       error: "Something went wrong while deleting content.",
+    });
+  }
+});
+
+// ===============================
+// SERVICE MANAGEMENT
+// ===============================
+
+// Get all services
+app.get("/api/services", (req, res) => {
+  try {
+    const services = db
+      .prepare("SELECT * FROM services ORDER BY id ASC")
+      .all();
+
+    res.json(services);
+  } catch (error) {
+    console.error("Error fetching services:", error);
+
+    res.status(500).json({
+      error: "Something went wrong while fetching services.",
+    });
+  }
+});
+
+// Add a new service
+app.post("/api/services", authenticateToken, requireAdmin, (req, res) => {
+  try {
+    let { name, description, category } = req.body;
+
+    // Make sure required fields exist
+    if (!name || !description) {
+      return res.status(400).json({
+        error: "Service name and description are required.",
+      });
+    }
+
+    // Remove unnecessary spaces
+    name = name.trim();
+    description = description.trim();
+    category = category ? category.trim() : "";
+
+    // Save service to database
+    const insert = db.prepare(`
+      INSERT INTO services (name, description, category)
+      VALUES (?, ?, ?)
+    `);
+
+    const result = insert.run(
+      name,
+      description,
+      category
+    );
+
+    res.status(201).json({
+      message: "Service created successfully.",
+      id: result.lastInsertRowid,
+    });
+  } catch (error) {
+    console.error("Error creating service:", error);
+
+    res.status(500).json({
+      error: "Something went wrong while creating the service.",
+    });
+  }
+});
+
+// Update an existing service
+app.put("/api/services/:id", authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let { name, description, category } = req.body;
+
+    // Make sure required fields exist
+    if (!name || !description) {
+      return res.status(400).json({
+        error: "Service name and description are required.",
+      });
+    }
+
+    // Remove unnecessary spaces
+    name = name.trim();
+    description = description.trim();
+    category = category ? category.trim() : "";
+
+    // Update service
+    const update = db.prepare(`
+      UPDATE services
+      SET
+        name = ?,
+        description = ?,
+        category = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    const result = update.run(
+      name,
+      description,
+      category,
+      id
+    );
+
+    // Check if service exists
+    if (result.changes === 0) {
+      return res.status(404).json({
+        error: "Service not found.",
+      });
+    }
+
+    res.json({
+      message: "Service updated successfully.",
+    });
+  } catch (error) {
+    console.error("Error updating service:", error);
+
+    res.status(500).json({
+      error: "Something went wrong while updating the service.",
+    });
+  }
+});
+
+// Delete a service
+app.delete("/api/services/:id", authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleteService = db.prepare(`
+      DELETE FROM services
+      WHERE id = ?
+    `);
+
+    const result = deleteService.run(id);
+
+    // Check if service exists
+    if (result.changes === 0) {
+      return res.status(404).json({
+        error: "Service not found.",
+      });
+    }
+
+    res.json({
+      message: "Service deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Error deleting service:", error);
+
+    res.status(500).json({
+      error: "Something went wrong while deleting the service.",
     });
   }
 });

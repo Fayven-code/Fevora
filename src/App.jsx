@@ -11,7 +11,7 @@ import fevenImage from "./assets/feven.jpeg";
 
 function App() {
   const [showTopButton, setShowTopButton] = useState(false);
-
+  const [services, setServices] = useState([]);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -67,6 +67,26 @@ function App() {
   };
 
   useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/services");
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch services.");
+        }
+
+        setServices(data);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  useEffect(() => {
     const cards = document.querySelectorAll(".reveal-card");
 
     const observer = new IntersectionObserver(
@@ -85,7 +105,7 @@ function App() {
     cards.forEach((card) => observer.observe(card));
 
     return () => observer.disconnect();
-  }, []);
+  }, [services]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -202,76 +222,20 @@ function App() {
 
         <div className="solutions-grid">
 
-          <div className="solution-card">
-            <span>01</span>
+          {services.map((service, index) => (
+            <div
+              className="solution-card reveal-card"
+              key={service.id}
+            >
+              <span>
+                {String(index + 1).padStart(2, "0")}
+              </span>
 
-            <h3>Web Development</h3>
+              <h3>{service.name}</h3>
 
-            <p>
-              High-performance websites and web applications
-              designed to help businesses grow online.
-            </p>
-          </div>
-
-
-          <div className="solution-card">
-            <span>02</span>
-
-            <h3>Brand & Logo Design</h3>
-
-            <p>
-              Distinctive visual identities and logos that make
-              businesses recognizable and memorable.
-            </p>
-          </div>
-
-
-          <div className="solution-card">
-            <span>03</span>
-
-            <h3>AI Solutions</h3>
-
-            <p>
-              Intelligent tools and automation that simplify
-              workflows and unlock new possibilities.
-            </p>
-          </div>
-
-
-          <div className="solution-card">
-            <span>04</span>
-
-            <h3>Cloud Solutions</h3>
-
-            <p>
-              Secure and scalable cloud systems built to support
-              modern businesses as they grow.
-            </p>
-          </div>
-
-
-          <div className="solution-card">
-            <span>05</span>
-
-            <h3>UI/UX Design</h3>
-
-            <p>
-              Thoughtful digital experiences that combine
-              beautiful design with effortless usability.
-            </p>
-          </div>
-
-
-          <div className="solution-card">
-            <span>06</span>
-
-            <h3>Custom Software</h3>
-
-            <p>
-              Tailored software solutions built around the
-              unique needs of your business.
-            </p>
-          </div>
+              <p>{service.description}</p>
+            </div>
+          ))}
 
         </div>
       </section>
