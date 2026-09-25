@@ -101,6 +101,21 @@ db.exec(`
   )
 `);
 
+// Create customer requests table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
 // Create services table
 db.prepare(`
   CREATE TABLE IF NOT EXISTS services (
@@ -565,6 +580,214 @@ app.get(
 
       res.status(500).json({
         error: "Unable to retrieve project.",
+      });
+    }
+  }
+);
+
+// ===============================
+// CUSTOMER REQUEST MANAGEMENT
+// ===============================
+
+// Submit a new customer request
+app.post(
+  "/api/customer/requests",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      let { title, description, category } = req.body;
+
+      // Make sure required fields exist
+      if (!title || !description || !category) {
+        return res.status(400).json({
+          error: "Title, description, and category are required.",
+        });
+      }
+
+      // Remove unnecessary spaces
+      title = title.trim();
+      description = description.trim();
+      category = category.trim();
+
+      // Validate after trimming
+      if (!title || !description || !category) {
+        return res.status(400).json({
+          error: "All fields are required.",
+        });
+      }
+
+      // Validate lengths
+      if (title.length > 200) {
+        return res.status(400).json({
+          error: "Title must be 200 characters or less.",
+        });
+      }
+
+      if (description.length > 2000) {
+        return res.status(400).json({
+          error: "Description must be 2000 characters or less.",
+        });
+      }
+
+      if (category.length > 100) {
+        return res.status(400).json({
+          error: "Category must be 100 characters or less.",
+        });
+      }
+
+      // Save request to database
+      const insert = db.prepare(`
+        INSERT INTO requests (
+          user_id,
+          title,
+          description,
+          category
+        )
+        VALUES (?, ?, ?, ?)
+      `);
+
+      const result = insert.run(
+        req.user.userId,
+        title,
+        description,
+        category
+      );
+
+      // Successful response
+      res.status(201).json({
+        message: "Request submitted successfully.",
+        requestId: result.lastInsertRowid,
+      });
+    } catch (error) {
+      console.error("Error submitting customer request:", error);
+
+      res.status(500).json({
+        error: "Unable to submit request.",
+      });
+    }
+  }
+);
+
+// Get customer's requests
+app.get(
+  "/api/customer/requests",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      const requests = db
+        .prepare(`
+          SELECT
+            id,
+            title,
+            description,
+            category,
+            status,
+            created_at,
+            updated_at
+          FROM requests
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+        `)
+        .all(req.user.userId);
+
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching customer requests:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve your requests.",
+      });
+    }
+  }
+);
+
+// Get all customer requests - Admin only
+app.get(
+  "/api/admin/requests",
+  authenticateToken,
+  requireAdmin,
+  (req, res) => {
+    try {
+      const requests = db
+        .prepare(`
+          SELECT
+            requests.id,
+            requests.title,
+            requests.description,
+            requests.category,
+            requests.status,
+            requests.created_at,
+            requests.updated_at,
+            users.full_name,
+            users.email
+          FROM requests
+          JOIN users ON requests.user_id = users.id
+          ORDER BY requests.created_at DESC
+        `)
+        .all();
+
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching admin requests:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve customer requests.",
+      });
+    }
+  }
+);
+
+// Update customer request status - Admin only
+app.put(
+  "/api/admin/requests/:id/status",
+  authenticateToken,
+  requireAdmin,
+  (req, res) => {
+    try {
+      const { status } = req.body;
+      const requestId = req.params.id;
+
+      const allowedStatuses = [
+        "Pending",
+        "In Review",
+        "In Progress",
+        "Completed",
+        "Rejected",
+      ];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          error: "Invalid request status.",
+        });
+      }
+
+      const existingRequest = db
+        .prepare("SELECT id FROM requests WHERE id = ?")
+        .get(requestId);
+
+      if (!existingRequest) {
+        return res.status(404).json({
+          error: "Request not found.",
+        });
+      }
+
+      db.prepare(`
+        UPDATE requests
+        SET status = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(status, requestId);
+
+      res.json({
+        message: "Request status updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating request status:", error);
+
+      res.status(500).json({
+        error: "Unable to update request status.",
       });
     }
   }

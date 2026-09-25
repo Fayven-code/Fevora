@@ -2336,6 +2336,23 @@ scroll-behavior: auto;
   transition: 0.3s ease;
 }
 
+.dashboard-input-group textarea {
+  width: 100%;
+  padding: 14px 16px;
+  background: #0D111A;
+  color: #f7f4ef;
+  border: 1px solid #2A3140;
+  border-radius: 6px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.3s ease;
+}
+
+.dashboard-input-group textarea:focus {
+  border-color: #4c7dff;
+}
+
 .dashboard-input-group input:focus {
   border-color: #4c7dff;
 }

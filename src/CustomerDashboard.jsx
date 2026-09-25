@@ -6,6 +6,15 @@ function CustomerDashboard() {
 
   const [user, setUser] = useState(null);
   const [project, setProject] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [requestForm, setRequestForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+  });
+
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requestError, setRequestError] = useState("");
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -68,12 +77,37 @@ function CustomerDashboard() {
         } catch (error) {
             console.error("Error fetching project:", error);
         }
-    };
+  };
+
+  const fetchRequests = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/customer/requests",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(data.error || "Unable to load requests.");
+        return;
+      }
+
+      setRequests(data);
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+    }
+  };
 
   // Load profile when dashboard opens
   useEffect(() => {
     fetchProfile();
     fetchProject();
+    fetchRequests();
   }, []);
 
   // Handle form changes
@@ -118,6 +152,54 @@ function CustomerDashboard() {
     } catch (error) {
       console.error("Error updating profile:", error);
       setError("Unable to connect to the server.");
+    }
+  };
+
+  const handleRequestChange = (e) => {
+    setRequestForm({
+      ...requestForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleRequestSubmit = async (e) => {
+    e.preventDefault();
+
+    setRequestMessage("");
+    setRequestError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/customer/requests",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(requestForm),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setRequestError(data.error || "Unable to submit request.");
+        return;
+      }
+
+      setRequestMessage(data.message);
+
+      setRequestForm({
+        title: "",
+        description: "",
+        category: "",
+      });
+      fetchRequests();
+
+    } catch (error) {
+      console.error("Error submitting request:", error);
+      setRequestError("Unable to connect to the server.");
     }
   };
 
@@ -285,57 +367,348 @@ function CustomerDashboard() {
         {/* My Project */}
         <div className="dashboard-card">
 
-            <div className="dashboard-card-heading">
-                <p>MY PROJECT</p>
+          <div className="dashboard-card-heading">
+            <p>MY PROJECT</p>
 
-                <h2>Your Fevora Project</h2>
+            <h2>Your Fevora Project</h2>
+          </div>
+
+          <div className="dashboard-info">
+
+            <div>
+              <span>Project</span>
+
+              <strong>
+                {project ? project.subject : "No project yet"}
+              </strong>
             </div>
 
-            <div className="dashboard-info">
+            <div>
+              <span>Status</span>
 
-                <div>
-                    <span>Project</span>
-                    <strong>
-                    {project ? project.subject : "No project yet"}
-                    </strong>
-                </div>
-
-                <div>
-                    <span>Status</span>
-                    <strong>Pending</strong>
-                </div>
-
-                <div>
-                    <span>Category</span>
-                    <strong>Digital Solution</strong>
-                </div>
-
-                <div>
-                    <span>Requested</span>
-                    <strong>
-                    {project
-                        ? new Date(project.created_at).toLocaleDateString()
-                        : "—"}
-                    </strong>
-                </div>
-
+              <strong>Pending</strong>
             </div>
 
-                <div style={{ marginTop: "15px" }}>
-                    <span style={{ color: "#8c9099", fontSize: "13px" }}>
-                        Project Description
-                    </span>
+            <div>
+              <span>Category</span>
 
-                    <p style={{ color: "#c7c9cf", lineHeight: "1.4", marginBottom: "0" }}>
-                        {project
-                        ? project.message
-                        : "You have not submitted a project request yet."}
-                    </p>
-                </div>
-
+              <strong>Digital Solution</strong>
             </div>
+
+            <div>
+              <span>Requested</span>
+
+              <strong>
+                {project
+                  ? new Date(project.created_at).toLocaleDateString()
+                  : "—"}
+              </strong>
+            </div>
+
+          </div>
+
+          <div style={{ marginTop: "15px" }}>
+            <span
+              style={{
+                color: "#8c9099",
+                fontSize: "13px"
+              }}
+            >
+              Project Description
+            </span>
+
+            <p
+              style={{
+                color: "#c7c9cf",
+                lineHeight: "1.4",
+                marginBottom: "0"
+              }}
+            >
+              {project
+                ? project.message
+                : "You have not submitted a project request yet."}
+            </p>
+          </div>
 
         </div>
+
+        {/* Submit Request */}
+        <div className="dashboard-card">
+
+          <div className="dashboard-card-heading">
+            <p>CUSTOMER REQUEST</p>
+
+            <h2>Submit a Request</h2>
+          </div>
+
+          <form
+            onSubmit={handleRequestSubmit}
+            className="dashboard-form"
+          >
+
+            <div className="dashboard-input-group">
+
+              <label htmlFor="title">
+                Request Title
+              </label>
+
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={requestForm.title}
+                onChange={handleRequestChange}
+                placeholder="What do you need?"
+                maxLength="200"
+                required
+              />
+
+            </div>
+
+            <div className="dashboard-input-group">
+
+              <label htmlFor="category">
+                Category
+              </label>
+
+              <input
+                type="text"
+                id="category"
+                name="category"
+                value={requestForm.category}
+                onChange={handleRequestChange}
+                placeholder="e.g. Web Development"
+                maxLength="100"
+                required
+              />
+
+            </div>
+
+            <div className="dashboard-input-group">
+
+              <label htmlFor="description">
+                Description
+              </label>
+
+              <textarea
+                id="description"
+                name="description"
+                value={requestForm.description}
+                onChange={handleRequestChange}
+                placeholder="Describe what you need..."
+                maxLength="2000"
+                rows="5"
+                required
+              />
+
+            </div>
+
+            <button
+              type="submit"
+              className="dashboard-save-button"
+            >
+              Submit Request
+            </button>
+
+          </form>
+
+          {requestMessage && (
+            <p className="success-message">
+              {requestMessage}
+            </p>
+          )}
+
+          {requestError && (
+            <p className="error-message">
+              {requestError}
+            </p>
+          )}
+
+        </div>
+
+        {/* My Requests */}
+        <div className="dashboard-card">
+
+          <div className="dashboard-card-heading">
+            <p>MY REQUESTS</p>
+
+            <h2>Your Requests</h2>
+          </div>
+
+          {requests.length === 0 ? (
+
+            <div
+              style={{
+                padding: "30px 0",
+                textAlign: "center",
+              }}
+            >
+              <p
+                style={{
+                  color: "#8c9099",
+                  margin: 0,
+                }}
+              >
+                You have not submitted any requests yet.
+              </p>
+            </div>
+
+          ) : (
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+              }}
+            >
+
+              {requests.map((request) => (
+
+                <div
+                  key={request.id}
+                  style={{
+                    padding: "20px",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background:
+                      "linear-gradient(135deg, rgba(49,92,255,0.07), rgba(10,12,16,0.7))",
+                    boxShadow:
+                      "0 8px 25px rgba(0,0,0,0.15)",
+                  }}
+                >
+
+                  {/* Top row */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "20px",
+                      marginBottom: "14px",
+                    }}
+                  >
+
+                    <div>
+
+                      <h3
+                        style={{
+                          margin: "0 0 7px",
+                          color: "#ffffff",
+                          fontSize: "18px",
+                        }}
+                      >
+                        {request.title}
+                      </h3>
+
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "5px 10px",
+                          borderRadius: "20px",
+                          background: "rgba(49,92,255,0.12)",
+                          border:
+                            "1px solid rgba(49,92,255,0.25)",
+                          color: "#8fa8ff",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {request.category}
+                      </span>
+
+                    </div>
+
+                    {/* Status */}
+                    <span
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "20px",
+                        background:
+                          request.status === "Completed"
+                            ? "rgba(76,175,80,0.12)"
+                            : request.status === "Rejected"
+                            ? "rgba(220,70,70,0.12)"
+                            : "rgba(214,194,163,0.12)",
+                        border:
+                          request.status === "Completed"
+                            ? "1px solid rgba(76,175,80,0.25)"
+                            : request.status === "Rejected"
+                            ? "1px solid rgba(220,70,70,0.25)"
+                            : "1px solid rgba(214,194,163,0.25)",
+                        color:
+                          request.status === "Completed"
+                            ? "#8fd18f"
+                            : request.status === "Rejected"
+                            ? "#e58b8b"
+                            : "#d6c2a3",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {request.status}
+                    </span>
+
+                  </div>
+
+                  {/* Description */}
+                  <p
+                    style={{
+                      color: "#c7c9cf",
+                      fontSize: "14px",
+                      lineHeight: "1.6",
+                      margin: "0 0 15px",
+                    }}
+                  >
+                    {request.description}
+                  </p>
+
+                  {/* Bottom information */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      paddingTop: "12px",
+                      borderTop:
+                        "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+
+                    <span
+                      style={{
+                        color: "#777c86",
+                        fontSize: "12px",
+                      }}
+                    >
+                      Request #{request.id}
+                    </span>
+
+                    <span
+                      style={{
+                        color: "#777c86",
+                        fontSize: "12px",
+                      }}
+                    >
+                      Submitted{" "}
+                      {new Date(
+                        request.created_at
+                      ).toLocaleDateString()}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          )}
+
+        </div>
+
+      </div>
 
     </div>
   );

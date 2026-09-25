@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Content() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [content, setContent] = useState([]);
+  const [requests, setRequests] = useState([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -42,9 +43,68 @@ function Content() {
     }
   };
 
+  // Get customer requests
+  const fetchRequests = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/admin/requests",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(data.error || "Unable to load requests.");
+        return;
+      }
+
+      setRequests(data);
+    } catch (error) {
+      console.error("Error fetching customer requests:", error);
+    }
+  };
+
+  const handleRequestStatusChange = async (requestId, newStatus) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/admin/requests/${requestId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            status: newStatus,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.error || "Unable to update request status.");
+        return;
+      }
+
+      setMessage(data.message);
+
+      // Refresh requests
+      fetchRequests();
+    } catch (error) {
+      console.error("Error updating request status:", error);
+      setMessage("Something went wrong. Please try again.");
+    }
+  };
+
   // Load content when page opens
   useEffect(() => {
     fetchContent();
+    fetchRequests();
   }, []);
 
   // Handle form changes
@@ -460,6 +520,150 @@ function Content() {
 
                       </div>
 
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </div>
+      {/* Customer Requests */}
+      <div className="content-list-section"
+      style={{ marginTop: "60px" }}>
+
+        <div className="content-list-heading">
+
+          <div>
+            <p className="content-eyebrow">
+              CUSTOMER REQUESTS
+            </p>
+
+            <h2>Service Requests</h2>
+          </div>
+
+          <span className="content-count">
+            {requests.length}{" "}
+            {requests.length === 1 ? "request" : "requests"}
+          </span>
+
+        </div>
+
+        {requests.length === 0 ? (
+          <div className="empty-content">
+            <p>No customer requests available yet.</p>
+          </div>
+        ) : (
+
+          <div className="content-table-wrapper">
+
+            <table className="content-table">
+
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Customer</th>
+                  <th>Request</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {requests.map((request, index) => (
+
+                  <tr key={request.id}>
+
+                    <td className="content-number">
+                      {index + 1}
+                    </td>
+
+                    <td className="content-title-cell">
+
+                      <strong>
+                        {request.full_name}
+                      </strong>
+
+                      <span>
+                        {request.email}
+                      </span>
+
+                    </td>
+
+                    <td className="content-title-cell">
+
+                      <strong>
+                        {request.title}
+                      </strong>
+
+                      <span>
+                        {request.description}
+                      </span>
+
+                    </td>
+
+                    <td>
+                      <span className="content-category">
+                        {request.category}
+                      </span>
+                    </td>
+
+                    <td>
+                      <select
+                        value={request.status}
+                        onChange={(e) =>
+                          handleRequestStatusChange(
+                            request.id,
+                            e.target.value
+                          )
+                        }
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          background: "#0a0c10",
+                          color: "#ffffff",
+                          cursor: "pointer",
+                        }}
+                      >
+
+                        <option value="Pending">
+                          Pending
+                        </option>
+
+                        <option value="In Review">
+                          In Review
+                        </option>
+
+                        <option value="In Progress">
+                          In Progress
+                        </option>
+
+                        <option value="Completed">
+                          Completed
+                        </option>
+
+                        <option value="Rejected">
+                          Rejected
+                        </option>
+
+                      </select>
+
+                    </td>
+
+                    <td className="content-date">
+                      {new Date(
+                        request.created_at
+                      ).toLocaleDateString()}
                     </td>
 
                   </tr>
