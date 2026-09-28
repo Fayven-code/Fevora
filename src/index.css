@@ -2940,3 +2940,49 @@ scroll-behavior: auto;
     text-align: center;
   }
 }
+
+/* Customer Request Filters */
+
+.request-filters {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.request-filters input,
+.request-filters select {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0a0c10;
+  color: #ffffff;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.request-filters input {
+  min-width: 240px;
+}
+
+.request-filters select {
+  min-width: 170px;
+  cursor: pointer;
+}
+
+.request-filters input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.request-filters input:focus,
+.request-filters select:focus {
+  border-color: #315cff;
+  box-shadow: 0 0 0 3px rgba(49, 92, 255, 0.1);
+}
+
+.request-filters option {
+  background: #0a0c10;
+  color: #ffffff;
+}

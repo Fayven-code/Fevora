@@ -703,34 +703,75 @@ app.get(
   }
 );
 
-// Get all customer requests - Admin only
+// Get customer requests with search and filtering - Admin only
 app.get(
   "/api/admin/requests",
   authenticateToken,
   requireAdmin,
   (req, res) => {
     try {
-      const requests = db
-        .prepare(`
-          SELECT
-            requests.id,
-            requests.title,
-            requests.description,
-            requests.category,
-            requests.status,
-            requests.created_at,
-            requests.updated_at,
-            users.full_name,
-            users.email
-          FROM requests
-          JOIN users ON requests.user_id = users.id
-          ORDER BY requests.created_at DESC
-        `)
-        .all();
+      const { search, status, date } = req.query;
+
+      let query = `
+        SELECT
+          requests.id,
+          requests.title,
+          requests.description,
+          requests.category,
+          requests.status,
+          requests.created_at,
+          requests.updated_at,
+          users.full_name,
+          users.email
+        FROM requests
+        JOIN users ON requests.user_id = users.id
+        WHERE 1 = 1
+      `;
+
+      const params = [];
+
+      // Search by customer name, email, title, description, or category
+      if (search && search.trim()) {
+        query += `
+          AND (
+            users.full_name LIKE ?
+            OR users.email LIKE ?
+            OR requests.title LIKE ?
+            OR requests.description LIKE ?
+            OR requests.category LIKE ?
+          )
+        `;
+
+        const searchValue = `%${search.trim()}%`;
+
+        params.push(
+          searchValue,
+          searchValue,
+          searchValue,
+          searchValue,
+          searchValue
+        );
+      }
+
+      // Filter by status
+      if (status && status !== "All") {
+        query += ` AND requests.status = ?`;
+        params.push(status);
+      }
+
+      if (date) {
+        query += ` AND DATE(requests.created_at) = ?`;
+        params.push(date);
+      }
+
+      // Newest requests first
+      query += ` ORDER BY requests.created_at DESC`;
+
+      const requests = db.prepare(query).all(...params);
 
       res.json(requests);
     } catch (error) {
-      console.error("Error fetching admin requests:", error);
+      console.error("Error searching/filtering customer requests:", error);
 
       res.status(500).json({
         error: "Unable to retrieve customer requests.",

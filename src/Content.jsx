@@ -6,6 +6,10 @@ function Content() {
   const [content, setContent] = useState([]);
   const [requests, setRequests] = useState([]);
 
+  const [requestSearch, setRequestSearch] = useState("");
+  const [requestStatus, setRequestStatus] = useState("All");
+  const [requestDate, setRequestDate] = useState("");
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -43,11 +47,33 @@ function Content() {
     }
   };
 
-  // Get customer requests
+  // Get customer requests with search and filters
   const fetchRequests = async () => {
     try {
+      const params = new URLSearchParams();
+      console.log("Search:", requestSearch);
+      console.log("Status:", requestStatus);
+      console.log("Date:", requestDate);
+
+      if (requestSearch.trim()) {
+        params.append("search", requestSearch.trim());
+      }
+
+      if (requestStatus !== "All") {
+        params.append("status", requestStatus);
+      }
+
+      if (requestDate) {
+        params.append("date", requestDate);
+      }
+
+      console.log(
+        "REQUEST URL:",
+        `http://localhost:5000/api/admin/requests?${params.toString()}`
+      );
+
       const response = await fetch(
-        "http://localhost:5000/api/admin/requests",
+        `http://localhost:5000/api/admin/requests?${params.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -104,8 +130,11 @@ function Content() {
   // Load content when page opens
   useEffect(() => {
     fetchContent();
-    fetchRequests();
   }, []);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [requestSearch, requestStatus, requestDate]);
 
   // Handle form changes
   const handleChange = (e) => {
@@ -547,6 +576,33 @@ function Content() {
             </p>
 
             <h2>Service Requests</h2>
+            <div className="request-filters">
+
+              <input
+                type="text"
+                placeholder="Search requests..."
+                value={requestSearch}
+                onChange={(e) => setRequestSearch(e.target.value)}
+              />
+
+              <select
+                value={requestStatus}
+                onChange={(e) => setRequestStatus(e.target.value)}
+              >
+                <option value="All">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="In Review">In Review</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+
+              <input
+                type="date"
+                value={requestDate}
+                onChange={(e) => setRequestDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <span className="content-count">
