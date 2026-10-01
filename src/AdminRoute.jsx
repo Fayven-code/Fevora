@@ -8,7 +8,7 @@ function AdminRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== "admin" && user.role !== "employee") {
     return <Navigate to="/" replace />;
   }
 

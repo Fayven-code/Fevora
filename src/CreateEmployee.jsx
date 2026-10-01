@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Login() {
-    const navigate = useNavigate();
+function CreateEmployee() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
+    full_name: "",
     email: "",
     password: "",
   });
@@ -25,44 +27,37 @@ function Login() {
     setError("");
 
     try {
+      const token = localStorage.getItem("token");
+
       const response = await fetch(
-        "http://localhost:5000/api/login",
+        "http://localhost:5000/api/admin/create-employee",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(formData),
         }
       );
 
       const data = await response.json();
-      console.log("Login data:", data);
 
       if (!response.ok) {
-        setError(data.error || "Login failed.");
+        setError(data.error || "Employee creation failed.");
         return;
       }
 
-      // Save the authentication token
-      localStorage.setItem("token", data.token);
+      setMessage("Employee account created successfully!");
 
-      // Save basic user information
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user)
-      );
-
-      setMessage("Login successful!");
-
-      if (data.user.role === "admin" || data.user.role === "employee") {
-        navigate("/content");
-      } else {
-        navigate("/dashboard");
-      }
+      setFormData({
+        full_name: "",
+        email: "",
+        password: "",
+      });
 
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Employee creation error:", error);
       setError("Unable to connect to the server.");
     }
   };
@@ -72,11 +67,25 @@ function Login() {
       <div className="register-container">
 
         <div className="register-header">
-          <h1>Welcome back</h1>
-          <p>Log in to your Fevora account.</p>
+          <h1>Create Employee</h1>
+          <p>Create a new Fevora employee account.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
+
+          <div className="form-group">
+            <label htmlFor="full_name">Full Name</label>
+
+            <input
+              type="text"
+              id="full_name"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              placeholder="Enter employee name"
+              required
+            />
+          </div>
 
           <div className="form-group">
             <label htmlFor="email">Email</label>
@@ -87,7 +96,7 @@ function Login() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="Enter your email"
+              placeholder="Enter employee email"
               required
             />
           </div>
@@ -101,26 +110,24 @@ function Login() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Enter your password"
+              placeholder="Create a password"
               required
             />
           </div>
 
           <button type="submit">
-            Log In
+            Create Employee
           </button>
 
         </form>
 
-        <p className="auth-switch">
-            Don't have an account?{" "}
-            <button
-                type="button"
-                onClick={() => navigate("/register")}
-            >
-                Register
-            </button>
-        </p>
+        <button
+          type="button"
+          className="auth-switch"
+          onClick={() => navigate("/content")}
+        >
+          Back to Admin
+        </button>
 
         {message && (
           <p className="success-message">{message}</p>
@@ -135,4 +142,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default CreateEmployee;

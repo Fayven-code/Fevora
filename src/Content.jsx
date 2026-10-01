@@ -3,8 +3,15 @@ import { useNavigate } from "react-router-dom";
 
 function Content() {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isAdmin = user?.role === "admin";
+  const isEmployee = user?.role === "employee";
   const [content, setContent] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [employeeName, setEmployeeName] = useState("");
+  const [employeeEmail, setEmployeeEmail] = useState("");
+  const [employeePassword, setEmployeePassword] = useState("");
+  const [employeeMessage, setEmployeeMessage] = useState("");
 
   const [requestSearch, setRequestSearch] = useState("");
   const [requestStatus, setRequestStatus] = useState("All");
@@ -190,7 +197,7 @@ function Content() {
       setMessage("Something went wrong. Please try again.");
     }
   };
-
+  
   // Edit content
   const handleEdit = (item) => {
     setEditingId(item.id);
@@ -291,140 +298,142 @@ function Content() {
       </div>
 
       {/* Add / Edit Form */}
-      <div className="content-form-card">
+      {isAdmin && (
+        <div className="content-form-card">
 
-        <div className="content-form-heading">
-          <span>
-            {editingId ? "EDIT CONTENT" : "ADD NEW CONTENT"}
-          </span>
+          <div className="content-form-heading">
+            <span>
+              {editingId ? "EDIT CONTENT" : "ADD NEW CONTENT"}
+            </span>
 
-          <h2>
-            {editingId
-              ? "Update your content"
-              : "Create something new"}
-          </h2>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="content-form"
-        >
-
-          {/* Title */}
-          <div className="content-input-group">
-            <label>Title</label>
-
-            <input
-              type="text"
-              name="title"
-              placeholder="Enter content title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-            />
+            <h2>
+              {editingId
+                ? "Update your content"
+                : "Create something new"}
+            </h2>
           </div>
 
-          {/* Description */}
-          <div className="content-input-group">
-            <label>Description</label>
+          <form
+            onSubmit={handleSubmit}
+            className="content-form"
+          >
 
-            <textarea
-              name="description"
-              placeholder="Write a description..."
-              value={formData.description}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Category + Status */}
-          <div className="content-form-row">
-
+            {/* Title */}
             <div className="content-input-group">
-              <label>Category</label>
+              <label>Title</label>
 
-              <select
-                name="category"
-                value={formData.category}
+              <input
+                type="text"
+                name="title"
+                placeholder="Enter content title"
+                value={formData.title}
                 onChange={handleChange}
                 required
-              >
-                <option value="">
-                  Select a solution
-                </option>
-
-                <option value="Web Development">
-                  Web Development
-                </option>
-
-                <option value="Brand & Logo Design">
-                  Brand & Logo Design
-                </option>
-
-                <option value="AI Solutions">
-                  AI Solutions
-                </option>
-
-                <option value="Cloud Solutions">
-                  Cloud Solutions
-                </option>
-
-                <option value="UI/UX Design">
-                  UI/UX Design
-                </option>
-
-                <option value="Custom Software">
-                  Custom Software
-                </option>
-              </select>
+              />
             </div>
 
+            {/* Description */}
             <div className="content-input-group">
-              <label>Status</label>
+              <label>Description</label>
 
-              <select
-                name="status"
-                value={formData.status}
+              <textarea
+                name="description"
+                placeholder="Write a description..."
+                value={formData.description}
                 onChange={handleChange}
-              >
-                <option value="Draft">
-                  Draft
-                </option>
-
-                <option value="Published">
-                  Published
-                </option>
-              </select>
+                required
+              />
             </div>
 
-          </div>
+            {/* Category + Status */}
+            <div className="content-form-row">
 
-          {/* Form Buttons */}
-          <div className="content-form-actions">
+              <div className="content-input-group">
+                <label>Category</label>
 
-            <button
-              type="submit"
-              className="content-primary-button"
-            >
-              {editingId
-                ? "Update Content"
-                : "Add Content"}
-            </button>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">
+                    Select a solution
+                  </option>
 
-            {editingId && (
+                  <option value="Web Development">
+                    Web Development
+                  </option>
+
+                  <option value="Brand & Logo Design">
+                    Brand & Logo Design
+                  </option>
+
+                  <option value="AI Solutions">
+                    AI Solutions
+                  </option>
+
+                  <option value="Cloud Solutions">
+                    Cloud Solutions
+                  </option>
+
+                  <option value="UI/UX Design">
+                    UI/UX Design
+                  </option>
+
+                  <option value="Custom Software">
+                    Custom Software
+                  </option>
+                </select>
+              </div>
+
+              <div className="content-input-group">
+                <label>Status</label>
+
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                >
+                  <option value="Draft">
+                    Draft
+                  </option>
+
+                  <option value="Published">
+                    Published
+                  </option>
+                </select>
+              </div>
+
+            </div>
+
+            {/* Form Buttons */}
+            <div className="content-form-actions">
+
               <button
-                type="button"
-                className="content-cancel-button"
-                onClick={handleCancel}
+                type="submit"
+                className="content-primary-button"
               >
-                Cancel
+                {editingId
+                  ? "Update Content"
+                  : "Add Content"}
               </button>
-            )}
 
-          </div>
+              {editingId && (
+                <button
+                  type="button"
+                  className="content-cancel-button"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+              )}
 
-        </form>
-      </div>
+            </div>
+
+          </form>
+        </div>
+      )}
 
       {/* Existing Content */}
       <div className="content-list-section">
@@ -465,7 +474,7 @@ function Content() {
                   <th>Category</th>
                   <th>Status</th>
                   <th>Created</th>
-                  <th>Actions</th>
+                  {isAdmin && <th>Actions</th>}
                 </tr>
               </thead>
 
@@ -524,33 +533,31 @@ function Content() {
                       ).toLocaleDateString()}
                     </td>
 
-                    {/* Actions */}
-                    <td>
+                    {isAdmin && (
+                      <td>
+                          <div className="content-table-actions">
 
-                      <div className="content-table-actions">
+                            <button
+                              className="content-edit-button"
+                              onClick={() =>
+                                handleEdit(item)
+                              }
+                            >
+                              Edit
+                            </button>
 
-                        <button
-                          className="content-edit-button"
-                          onClick={() =>
-                            handleEdit(item)
-                          }
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          className="content-delete-button"
-                          onClick={() =>
-                            handleDelete(item.id)
-                          }
-                        >
-                          Delete
-                        </button>
-
-                      </div>
-
-                    </td>
-
+                            <button
+                              className="content-delete-button"
+                              onClick={() =>
+                                handleDelete(item.id)
+                              }
+                            >
+                              Delete
+                            </button>
+                          </div>
+                      
+                      </td>
+                    )}
                   </tr>
 
                 ))}

@@ -45,6 +45,27 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireAdminOrEmployee(req, res, next) {
+  if (req.user.role !== "admin" && req.user.role !== "employee") {
+    return res.status(403).json({
+      error: "Admin or employee access required.",
+    });
+  }
+
+  next();
+}
+
+// Employee-only middleware
+function requireEmployee(req, res, next) {
+  if (req.user.role !== "employee") {
+    return res.status(403).json({
+      error: "Employee access required.",
+    });
+  }
+
+  next();
+}
+
 function requireCustomer(req, res, next) {
   if (req.user.role !== "user") {
     return res.status(403).json({
@@ -250,6 +271,62 @@ app.post("/api/register", async (req, res) => {
 
   } catch (error) {
     console.error("Error registering user:", error);
+
+    res.status(500).json({
+      error: "Something went wrong. Please try again later.",
+    });
+  }
+});
+
+app.post("/api/admin/create-employee", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    let { full_name, email, password } = req.body;
+
+    if (!full_name || !email || !password) {
+      return res.status(400).json({
+        error: "Full name, email, and password are required.",
+      });
+    }
+
+    full_name = full_name.trim();
+    email = email.trim().toLowerCase();
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        error: "Password must be at least 8 characters long.",
+      });
+    }
+
+    const existingUser = db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .get(email);
+
+    if (existingUser) {
+      return res.status(409).json({
+        error: "An account with this email already exists.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const insert = db.prepare(`
+      INSERT INTO users (full_name, email, password_hash, role)
+      VALUES (?, ?, ?, 'employee')
+    `);
+
+    const result = insert.run(
+      full_name,
+      email,
+      passwordHash
+    );
+
+    res.status(201).json({
+      message: "Employee account created successfully.",
+      userId: result.lastInsertRowid,
+    });
+
+  } catch (error) {
+    console.error("Error creating employee:", error);
 
     res.status(500).json({
       error: "Something went wrong. Please try again later.",
@@ -707,7 +784,7 @@ app.get(
 app.get(
   "/api/admin/requests",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrEmployee,
   (req, res) => {
     try {
       const { search, status, date } = req.query;
@@ -784,7 +861,7 @@ app.get(
 app.put(
   "/api/admin/requests/:id/status",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrEmployee,
   (req, res) => {
     try {
       const { status } = req.body;
@@ -836,7 +913,7 @@ app.put(
 
 // Get all content items
 
-app.get("/api/content", authenticateToken, requireAdmin, (req, res) => {
+app.get("/api/content", authenticateToken, requireAdminOrEmployee, (req, res) => {
   try {
     const content = db
       .prepare("SELECT * FROM content ORDER BY created_at DESC")
@@ -1043,7 +1120,7 @@ app.post("/api/services", authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Update an existing service
-app.put("/api/services/:id", authenticateToken, requireAdmin, (req, res) => {
+app.put("/api/services/:id", authenticateToken, requireAdminOrEmployee, (req, res) => {
   try {
     const { id } = req.params;
 

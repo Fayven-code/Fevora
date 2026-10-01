@@ -10,6 +10,7 @@ import AdminRoute from "./AdminRoute";
 import CustomerDashboard from "./CustomerDashboard";
 import CustomerRoute from "./CustomerRoute";
 import ServiceManagement from "./ServiceManagement";
+import CreateEmployee from "./CreateEmployee";
 import "./index.css";
 
 createRoot(document.getElementById("root")).render(
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")).render(
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<CustomerRoute><CustomerDashboard /></CustomerRoute>} />
         <Route path="/services" element={<AdminRoute><ServiceManagement /></AdminRoute>} />
+        <Route path="/create-employee" element={<CreateEmployee />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
