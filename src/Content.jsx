@@ -637,6 +637,7 @@ function Content() {
                   <th>Category</th>
                   <th>Status</th>
                   <th>Created</th>
+                  <th>Attachment</th>
                 </tr>
               </thead>
 
@@ -727,6 +728,32 @@ function Content() {
                       {new Date(
                         request.created_at
                       ).toLocaleDateString()}
+                    </td>
+
+                    <td>
+                      {request.document_name ? (
+                        <a
+                          href={`http://localhost:5000/uploads/${request.file_name}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: "#8fa8ff",
+                            fontSize: "13px",
+                            textDecoration: "none",
+                          }}
+                        >
+                          📎 {request.document_name}
+                        </a>
+                      ) : (
+                        <span
+                          style={{
+                            color: "#777c86",
+                            fontSize: "12px",
+                          }}
+                        >
+                          No attachment
+                        </span>
+                      )}
                     </td>
 
                   </tr>
