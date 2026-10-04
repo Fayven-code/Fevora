@@ -3,9 +3,36 @@ const cors = require("cors");
 const Database = require("better-sqlite3");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const PORT = 5000;
+
+// File upload configuration
+
+const uploadFolder = path.join(__dirname, "uploads");
+
+// Create uploads folder automatically if it does not exist
+if (!fs.existsSync(uploadFolder)) {
+  fs.mkdirSync(uploadFolder, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+
+  destination: (req, file, cb) => {
+    cb(null, uploadFolder);
+  },
+
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + "-" + file.originalname;
+    cb(null, uniqueName);
+  },
+
+});
+
+const upload = multer({ storage });
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
@@ -79,6 +106,7 @@ function requireCustomer(req, res, next) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Connect to SQLite database
 const db = new Database("fevora.db");
@@ -148,6 +176,36 @@ db.prepare(`
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `).run();
+
+// Create documents table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    request_id INTEGER,
+    original_name TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (request_id) REFERENCES requests(id)
+  )
+`);
+
+const documentColumns = db.prepare("PRAGMA table_info(documents)").all();
+
+const hasRequestId = documentColumns.some(
+  (column) => column.name === "request_id"
+);
+
+if (!hasRequestId) {
+  db.exec(`
+    ALTER TABLE documents
+    ADD COLUMN request_id INTEGER
+  `);
+}
 
 // Add role column if the existing database doesn't have it
 const userColumns = db.prepare("PRAGMA table_info(users)").all();
@@ -663,6 +721,96 @@ app.get(
 );
 
 // ===============================
+// DOCUMENT UPLOAD
+// ===============================
+
+app.post(
+  "/api/customer/documents",
+  authenticateToken,
+  requireCustomer,
+  upload.single("file"),
+  (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          error: "No file was uploaded.",
+        });
+      }
+
+      const insert = db.prepare(`
+        INSERT INTO documents (
+          user_id,
+          request_id,
+          original_name,
+          file_name,
+          file_path,
+          file_type,
+          file_size
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const result = insert.run(
+        req.user.userId,
+        req.body.request_id,
+        req.file.originalname,
+        req.file.filename,
+        req.file.path,
+        req.file.mimetype,
+        req.file.size
+      );
+
+      res.status(201).json({
+        message: "File uploaded successfully.",
+        documentId: result.lastInsertRowid,
+        fileName: req.file.originalname,
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+
+      res.status(500).json({
+        error: "Unable to upload file.",
+      });
+    }
+  }
+);
+
+// Get customer's uploaded documents
+
+app.get(
+  "/api/customer/documents",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      const documents = db
+        .prepare(`
+          SELECT
+            id,
+            original_name,
+            file_name,
+            file_path,
+            file_type,
+            file_size,
+            created_at
+          FROM documents
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+        `)
+        .all(req.user.userId);
+
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve your documents.",
+      });
+    }
+  }
+);
+
+// ===============================
 // CUSTOMER REQUEST MANAGEMENT
 // ===============================
 
@@ -756,16 +904,23 @@ app.get(
       const requests = db
         .prepare(`
           SELECT
-            id,
-            title,
-            description,
-            category,
-            status,
-            created_at,
-            updated_at
+            requests.id,
+            requests.title,
+            requests.description,
+            requests.category,
+            requests.status,
+            requests.created_at,
+            requests.updated_at,
+            documents.id AS document_id,
+            documents.original_name AS document_name,
+            documents.file_name,
+            documents.file_type,
+            documents.file_size
           FROM requests
-          WHERE user_id = ?
-          ORDER BY created_at DESC
+          LEFT JOIN documents
+            ON documents.request_id = requests.id
+          WHERE requests.user_id = ?
+          ORDER BY requests.created_at DESC
         `)
         .all(req.user.userId);
 
@@ -799,9 +954,15 @@ app.get(
           requests.created_at,
           requests.updated_at,
           users.full_name,
-          users.email
+          users.email,
+          documents.id AS document_id,
+          documents.original_name AS document_name,
+          documents.file_name,
+          documents.file_type,
+          documents.file_size
         FROM requests
         JOIN users ON requests.user_id = users.id
+        LEFT JOIN documents ON documents.request_id = requests.id
         WHERE 1 = 1
       `;
 

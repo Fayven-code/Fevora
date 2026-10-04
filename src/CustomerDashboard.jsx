@@ -15,6 +15,7 @@ function CustomerDashboard() {
 
   const [requestMessage, setRequestMessage] = useState("");
   const [requestError, setRequestError] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -162,6 +163,17 @@ function CustomerDashboard() {
     });
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
   const handleRequestSubmit = async (e) => {
     e.preventDefault();
 
@@ -169,6 +181,7 @@ function CustomerDashboard() {
     setRequestError("");
 
     try {
+      // Submit the customer request first
       const response = await fetch(
         "http://localhost:5000/api/customer/requests",
         {
@@ -188,15 +201,56 @@ function CustomerDashboard() {
         return;
       }
 
-      setRequestMessage(data.message);
+      // Upload the file if the customer selected one
+      if (selectedFile) {
+        const fileData = new FormData();
+
+        fileData.append("file", selectedFile);
+        fileData.append("request_id", data.requestId);
+
+        const fileResponse = await fetch(
+          "http://localhost:5000/api/customer/documents",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: fileData,
+          }
+        );
+
+        const fileResult = await fileResponse.json();
+
+        if (!fileResponse.ok) {
+          setRequestError(
+            fileResult.error || "Request submitted, but file upload failed."
+          );
+          return;
+        }
+      }
+
+      setRequestMessage(
+        selectedFile
+          ? "Request and file submitted successfully."
+          : data.message
+      );
 
       setRequestForm({
         title: "",
         description: "",
         category: "",
       });
-      fetchRequests();
 
+      setSelectedFile(null);
+
+      // Reset the file input
+      const fileInput = document.getElementById("request-file");
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
+      fetchRequests();
     } catch (error) {
       console.error("Error submitting request:", error);
       setRequestError("Unable to connect to the server.");
@@ -503,6 +557,30 @@ function CustomerDashboard() {
 
             </div>
 
+            <div className="dashboard-input-group">
+
+              <label htmlFor="request-file">
+                Attachment
+              </label>
+
+              <input
+                type="file"
+                id="request-file"
+                onChange={handleFileChange}
+              />
+
+              <small
+                style={{
+                  color: "#777c86",
+                  fontSize: "12px",
+                  marginTop: "6px",
+                }}
+              >
+                Attach a file related to your request (optional).
+              </small>
+
+            </div>
+
             <button
               type="submit"
               className="dashboard-save-button"
@@ -662,6 +740,43 @@ function CustomerDashboard() {
                   >
                     {request.description}
                   </p>
+
+                  {/* Attachment */}
+                  {request.document_name && (
+                    <div
+                      style={{
+                        marginBottom: "15px",
+                        padding: "12px 14px",
+                        borderRadius: "10px",
+                        background: "rgba(214,194,163,0.06)",
+                        border: "1px solid rgba(214,194,163,0.12)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "#777c86",
+                          fontSize: "12px",
+                          display: "block",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        Attachment
+                      </span>
+
+                      <a
+                        href={`http://localhost:5000/uploads/${request.file_name}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#8fa8ff",
+                          fontSize: "14px",
+                          textDecoration: "none",
+                        }}
+                      >
+                        📎 {request.document_name}
+                      </a>
+                    </div>
+                  )}
 
                   {/* Bottom information */}
                   <div
