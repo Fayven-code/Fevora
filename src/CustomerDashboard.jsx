@@ -5,7 +5,7 @@ function CustomerDashboard() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
-  const [project, setProject] = useState(null);
+  const [projects, setProjects] = useState([]);
   const [requests, setRequests] = useState([]);
   const [requestForm, setRequestForm] = useState({
     title: "",
@@ -57,27 +57,28 @@ function CustomerDashboard() {
     }
   };
 
-  const fetchProject = async () => {
+  const fetchProjects = async () => {
     try {
-        const response = await fetch(
-            "http://localhost:5000/api/customer/project",
-            {
-                headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-            }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-            return;
-            }
-
-            setProject(data);
-        } catch (error) {
-            console.error("Error fetching project:", error);
+      const response = await fetch(
+        "http://localhost:5000/api/customer/projects",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(data.error || "Unable to load projects.");
+        return;
+      }
+
+      setProjects(data);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
   };
 
   const fetchRequests = async () => {
@@ -107,7 +108,7 @@ function CustomerDashboard() {
   // Load profile when dashboard opens
   useEffect(() => {
     fetchProfile();
-    fetchProject();
+    fetchProjects();
     fetchRequests();
   }, []);
 
@@ -418,71 +419,152 @@ function CustomerDashboard() {
 
         </div>
 
-        {/* My Project */}
+        {/* My Projects */}
         <div className="dashboard-card">
 
           <div className="dashboard-card-heading">
-            <p>MY PROJECT</p>
-
-            <h2>Your Fevora Project</h2>
+            <p>MY PROJECTS</p>
+            <h2>Your Fevora Projects</h2>
           </div>
 
-          <div className="dashboard-info">
+          {projects.length === 0 ? (
 
-            <div>
-              <span>Project</span>
-
-              <strong>
-                {project ? project.subject : "No project yet"}
-              </strong>
-            </div>
-
-            <div>
-              <span>Status</span>
-
-              <strong>Pending</strong>
-            </div>
-
-            <div>
-              <span>Category</span>
-
-              <strong>Digital Solution</strong>
-            </div>
-
-            <div>
-              <span>Requested</span>
-
-              <strong>
-                {project
-                  ? new Date(project.created_at).toLocaleDateString()
-                  : "—"}
-              </strong>
-            </div>
-
-          </div>
-
-          <div style={{ marginTop: "15px" }}>
-            <span
+            <div
               style={{
-                color: "#8c9099",
-                fontSize: "13px"
+                padding: "30px 0",
+                textAlign: "center",
               }}
             >
-              Project Description
-            </span>
+              <p
+                style={{
+                  color: "#8c9099",
+                  margin: 0,
+                }}
+              >
+                You do not have any projects assigned yet.
+              </p>
+            </div>
 
-            <p
+          ) : (
+
+            <div
               style={{
-                color: "#c7c9cf",
-                lineHeight: "1.4",
-                marginBottom: "0"
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
               }}
             >
-              {project
-                ? project.message
-                : "You have not submitted a project request yet."}
-            </p>
-          </div>
+
+              {projects.map((project) => (
+
+                <div
+                  key={project.id}
+                  style={{
+                    padding: "20px",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background:
+                      "linear-gradient(135deg, rgba(49,92,255,0.07), rgba(10,12,16,0.7))",
+                  }}
+                >
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "20px",
+                      marginBottom: "15px",
+                    }}
+                  >
+
+                    <div>
+                      <span
+                        style={{
+                          color: "#d6c2a3",
+                          fontSize: "11px",
+                          letterSpacing: "1.5px",
+                        }}
+                      >
+                        PROJECT #{project.id}
+                      </span>
+
+                      <h3
+                        style={{
+                          color: "#ffffff",
+                          fontSize: "20px",
+                          margin: "6px 0 0",
+                        }}
+                      >
+                        {project.name}
+                      </h3>
+                    </div>
+
+                    <span
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "20px",
+                        background: "rgba(49,92,255,0.12)",
+                        border: "1px solid rgba(49,92,255,0.25)",
+                        color: "#8fa8ff",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {project.status}
+                    </span>
+
+                  </div>
+
+                  <p
+                    style={{
+                      color: "#c7c9cf",
+                      fontSize: "14px",
+                      lineHeight: "1.6",
+                      margin: "0 0 18px",
+                    }}
+                  >
+                    {project.description}
+                  </p>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      paddingTop: "12px",
+                      borderTop: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+
+                    <span
+                      style={{
+                        color: "#777c86",
+                        fontSize: "12px",
+                      }}
+                    >
+                      Project #{project.id}
+                    </span>
+
+                    <span
+                      style={{
+                        color: "#777c86",
+                        fontSize: "12px",
+                      }}
+                    >
+                      Created{" "}
+                      {new Date(project.created_at).toLocaleDateString()}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          )}
 
         </div>
 

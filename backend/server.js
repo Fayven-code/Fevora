@@ -194,6 +194,34 @@ db.exec(`
   )
 `);
 
+// Create projects table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Not Started',
+    client_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES users(id)
+  )
+`);
+
+// Create project members table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS project_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL DEFAULT 'Member',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(project_id, user_id)
+  )
+`);
+
 const documentColumns = db.prepare("PRAGMA table_info(documents)").all();
 
 const hasRequestId = documentColumns.some(
@@ -1366,6 +1394,548 @@ app.delete("/api/services/:id", authenticateToken, requireAdmin, (req, res) => {
     });
   }
 });
+
+// ===============================
+// PROJECT MANAGEMENT
+// ===============================
+
+// Create a new project
+app.post(
+  "/api/admin/projects",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      let { name, description, status, client_id } = req.body;
+
+      // Make sure required fields exist
+      if (!name || !description || !client_id) {
+        return res.status(400).json({
+          error: "Project name, description, and client are required.",
+        });
+      }
+
+      // Remove unnecessary spaces
+      name = name.trim();
+      description = description.trim();
+      status = status ? status.trim() : "Not Started";
+
+      // Check again after trimming
+      if (!name || !description) {
+        return res.status(400).json({
+          error: "Project name and description are required.",
+        });
+      }
+
+      // Allowed project statuses
+      const allowedStatuses = [
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "On Hold",
+      ];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          error: "Invalid project status.",
+        });
+      }
+
+      // Check that the client exists
+      const client = db
+        .prepare(`
+          SELECT id, full_name, email, role
+          FROM users
+          WHERE id = ? AND role = 'user'
+        `)
+        .get(client_id);
+
+      if (!client) {
+        return res.status(404).json({
+          error: "Customer not found.",
+        });
+      }
+
+      // Create the project
+      const insert = db.prepare(`
+        INSERT INTO projects (
+          name,
+          description,
+          status,
+          client_id
+        )
+        VALUES (?, ?, ?, ?)
+      `);
+
+      const result = insert.run(
+        name,
+        description,
+        status,
+        client_id
+      );
+
+      res.status(201).json({
+        message: "Project created successfully.",
+        projectId: result.lastInsertRowid,
+      });
+    } catch (error) {
+      console.error("Error creating project:", error);
+
+      res.status(500).json({
+        error: "Unable to create project.",
+      });
+    }
+  }
+);
+
+// Get all projects
+app.get(
+  "/api/admin/projects",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const projects = db
+        .prepare(`
+          SELECT
+            projects.id,
+            projects.name,
+            projects.description,
+            projects.status,
+            projects.client_id,
+            projects.created_at,
+            projects.updated_at,
+            users.full_name AS client_name,
+            users.email AS client_email
+          FROM projects
+          JOIN users
+            ON projects.client_id = users.id
+          ORDER BY projects.created_at DESC
+        `)
+        .all();
+
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve projects.",
+      });
+    }
+  }
+);
+
+// Update an existing project
+app.put(
+  "/api/admin/projects/:id",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const { id } = req.params;
+      let { name, description, status, client_id } = req.body;
+
+      // Make sure required fields exist
+      if (!name || !description || !client_id) {
+        return res.status(400).json({
+          error: "Project name, description, and client are required.",
+        });
+      }
+
+      // Remove unnecessary spaces
+      name = name.trim();
+      description = description.trim();
+      status = status ? status.trim() : "Not Started";
+
+      if (!name || !description) {
+        return res.status(400).json({
+          error: "Project name and description are required.",
+        });
+      }
+
+      // Allowed project statuses
+      const allowedStatuses = [
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "On Hold",
+      ];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          error: "Invalid project status.",
+        });
+      }
+
+      // Check that the project exists
+      const existingProject = db
+        .prepare("SELECT id FROM projects WHERE id = ?")
+        .get(id);
+
+      if (!existingProject) {
+        return res.status(404).json({
+          error: "Project not found.",
+        });
+      }
+
+      // Check that the client exists
+      const client = db
+        .prepare(`
+          SELECT id
+          FROM users
+          WHERE id = ? AND role = 'user'
+        `)
+        .get(client_id);
+
+      if (!client) {
+        return res.status(404).json({
+          error: "Customer not found.",
+        });
+      }
+
+      // Update the project
+      const update = db.prepare(`
+        UPDATE projects
+        SET
+          name = ?,
+          description = ?,
+          status = ?,
+          client_id = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+
+      update.run(
+        name,
+        description,
+        status,
+        client_id,
+        id
+      );
+
+      res.json({
+        message: "Project updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating project:", error);
+
+      res.status(500).json({
+        error: "Unable to update project.",
+      });
+    }
+  }
+);
+
+// Delete a project
+app.delete(
+  "/api/admin/projects/:id",
+  authenticateToken,
+  requireAdmin,
+  (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Check that the project exists
+      const project = db
+        .prepare("SELECT id FROM projects WHERE id = ?")
+        .get(id);
+
+      if (!project) {
+        return res.status(404).json({
+          error: "Project not found.",
+        });
+      }
+
+      // Remove project members first
+      db.prepare(`
+        DELETE FROM project_members
+        WHERE project_id = ?
+      `).run(id);
+
+      // Delete the project
+      db.prepare(`
+        DELETE FROM projects
+        WHERE id = ?
+      `).run(id);
+
+      res.json({
+        message: "Project deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting project:", error);
+
+      res.status(500).json({
+        error: "Unable to delete project.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/admin/projects/:projectId/members",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { user_id, role } = req.body;
+
+      // Make sure user_id exists
+      if (!user_id) {
+        return res.status(400).json({
+          error: "User ID is required.",
+        });
+      }
+
+      // Check that the project exists
+      const project = db
+        .prepare("SELECT id FROM projects WHERE id = ?")
+        .get(projectId);
+
+      if (!project) {
+        return res.status(404).json({
+          error: "Project not found.",
+        });
+      }
+
+      // Check that the user exists and is an employee
+      const employee = db
+        .prepare(`
+          SELECT id, full_name, email, role
+          FROM users
+          WHERE id = ? AND role = 'employee'
+        `)
+        .get(user_id);
+
+      if (!employee) {
+        return res.status(404).json({
+          error: "Employee not found.",
+        });
+      }
+
+      // Check if employee is already assigned
+      const existingMember = db
+        .prepare(`
+          SELECT id
+          FROM project_members
+          WHERE project_id = ? AND user_id = ?
+        `)
+        .get(projectId, user_id);
+
+      if (existingMember) {
+        return res.status(409).json({
+          error: "This employee is already assigned to the project.",
+        });
+      }
+
+      // Add employee to project
+      const insert = db.prepare(`
+        INSERT INTO project_members (
+          project_id,
+          user_id,
+          role
+        )
+        VALUES (?, ?, ?)
+      `);
+
+      const result = insert.run(
+        projectId,
+        user_id,
+        role || "Member"
+      );
+
+      res.status(201).json({
+        message: "Employee added to project successfully.",
+        memberId: result.lastInsertRowid,
+      });
+
+    } catch (error) {
+      console.error("Error adding project member:", error);
+
+      res.status(500).json({
+        error: "Unable to add project member.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/projects/:projectId/members",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const { projectId } = req.params;
+
+      // Check that the project exists
+      const project = db
+        .prepare("SELECT id FROM projects WHERE id = ?")
+        .get(projectId);
+
+      if (!project) {
+        return res.status(404).json({
+          error: "Project not found.",
+        });
+      }
+
+      // Get all members assigned to the project
+      const members = db
+        .prepare(`
+          SELECT
+            project_members.id,
+            project_members.project_id,
+            project_members.user_id,
+            project_members.role,
+            project_members.created_at,
+            users.full_name,
+            users.email
+          FROM project_members
+          JOIN users
+            ON project_members.user_id = users.id
+          WHERE project_members.project_id = ?
+          ORDER BY project_members.created_at ASC
+        `)
+        .all(projectId);
+
+      res.json(members);
+
+    } catch (error) {
+      console.error("Error fetching project members:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve project members.",
+      });
+    }
+  }
+);
+
+// Get all customers for project assignment
+app.get(
+  "/api/admin/project-clients",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const clients = db
+        .prepare(`
+          SELECT id, full_name, email
+          FROM users
+          WHERE role = 'user'
+          ORDER BY full_name ASC
+        `)
+        .all();
+
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching project clients:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve customers.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/project-employees",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const employees = db
+        .prepare(`
+          SELECT id, full_name, email
+          FROM users
+          WHERE role = 'employee'
+          ORDER BY full_name ASC
+        `)
+        .all();
+
+      res.json(employees);
+    } catch (error) {
+      console.error("Error fetching project employees:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve employees.",
+      });
+    }
+  }
+);
+
+app.delete(
+  "/api/admin/projects/:projectId/members/:memberId",
+  authenticateToken,
+  requireAdminOrEmployee,
+  (req, res) => {
+    try {
+      const { projectId, memberId } = req.params;
+
+      // Check that the member belongs to this project
+      const member = db
+        .prepare(`
+          SELECT id
+          FROM project_members
+          WHERE id = ? AND project_id = ?
+        `)
+        .get(memberId, projectId);
+
+      if (!member) {
+        return res.status(404).json({
+          error: "Project member not found.",
+        });
+      }
+
+      // Remove the member
+      db.prepare(`
+        DELETE FROM project_members
+        WHERE id = ? AND project_id = ?
+      `).run(memberId, projectId);
+
+      res.json({
+        message: "Project member removed successfully.",
+      });
+
+    } catch (error) {
+      console.error("Error removing project member:", error);
+
+      res.status(500).json({
+        error: "Unable to remove project member.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/customer/projects",
+  authenticateToken,
+  requireCustomer,
+  (req, res) => {
+    try {
+      const projects = db
+        .prepare(`
+          SELECT
+            projects.id,
+            projects.name,
+            projects.description,
+            projects.status,
+            projects.created_at,
+            projects.updated_at
+          FROM projects
+          WHERE projects.client_id = ?
+          ORDER BY projects.created_at DESC
+        `)
+        .all(req.user.id);
+
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching customer projects:", error);
+
+      res.status(500).json({
+        error: "Unable to retrieve your projects.",
+      });
+    }
+  }
+);
 
 // Start server
 app.listen(PORT, () => {
