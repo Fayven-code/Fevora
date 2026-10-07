@@ -32,6 +32,8 @@ function Projects() {
 
       const data = await response.json();
 
+      console.log("Admin projects:", data);
+
       if (!response.ok) {
         setError(data.error || "Unable to load projects.");
         return;

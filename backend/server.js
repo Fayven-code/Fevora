@@ -1924,7 +1924,7 @@ app.get(
           WHERE projects.client_id = ?
           ORDER BY projects.created_at DESC
         `)
-        .all(req.user.id);
+        .all(req.user.userId);
 
       res.json(projects);
     } catch (error) {
