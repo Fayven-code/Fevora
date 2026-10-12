@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   FaInstagram,
   FaSnapchatGhost,
@@ -12,6 +13,7 @@ import fevenImage from "./assets/feven.jpeg";
 function App() {
   const [showTopButton, setShowTopButton] = useState(false);
   const [services, setServices] = useState([]);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -515,8 +517,7 @@ function App() {
         </h2>
 
         <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
+          href="/login"
           className="contact-button"
         >
           Let's Talk →

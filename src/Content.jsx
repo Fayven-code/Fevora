@@ -1,13 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Projects from "./Projects";
+import ServiceManagement from "./ServiceManagement";
+import App from "./App";
 
 function Content() {
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState("content");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const isAdmin = user?.role === "admin";
   const isEmployee = user?.role === "employee";
   const [content, setContent] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [projectEmployees, setProjectEmployees] = useState([]);
+  const [clientError, setClientError] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [employeePassword, setEmployeePassword] = useState("");
@@ -51,6 +60,32 @@ function Content() {
       setContent(data.reverse());
     } catch (error) {
       console.error("Error fetching content:", error);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/admin/project-clients",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setClientError(data.error || "Unable to load clients.");
+        return;
+      }
+
+      setClients(data);
+      setClientError("");
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      setClientError("Unable to connect to the server.");
     }
   };
 
@@ -137,6 +172,7 @@ function Content() {
   // Load content when page opens
   useEffect(() => {
     fetchContent();
+    fetchClients();
   }, []);
 
   useEffect(() => {
@@ -266,7 +302,116 @@ function Content() {
   };
 
   return (
-    <div className="content-page">
+    <div className="content-layout">
+      <button
+        className="sidebar-menu-button"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Toggle sidebar"
+      >
+        ☰
+      </button>
+
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`dashboard-sidebar ${sidebarOpen ? "sidebar-open" : ""}`}
+      >
+
+        <div className="sidebar-brand">
+          <h2>FEVORA<span>.</span></h2>
+          <p>MANAGEMENT SYSTEM</p>
+        </div>
+
+        <p className="sidebar-label">WORKSPACE</p>
+
+        <button
+          className={`sidebar-link ${
+            activeSection === "landing" ? "active" : ""
+          }`}
+          onClick={() => {
+            setActiveSection("landing");
+            setSidebarOpen(false);
+          }}
+        >
+          Landing Page
+        </button>
+
+        <button
+          className={`sidebar-link ${activeSection === "content" ? "active" : ""}`}
+          onClick={() => {
+            setActiveSection("content");
+            setSidebarOpen(false);
+          }}
+        >
+          Content Management
+        </button>
+
+        <button
+          className={`sidebar-link ${activeSection === "services" ? "active" : ""}`}
+          onClick={() => {
+            setActiveSection("services");
+            setSidebarOpen(false);
+          }}
+        >
+          Services
+        </button>
+
+        <button
+          className={`sidebar-link ${activeSection === "requests" ? "active" : ""}`}
+          onClick={() => {
+            setActiveSection("requests");
+            setSidebarOpen(false);
+          }}
+        >
+          Customer Requests
+        </button>
+
+        <p className="sidebar-label">PROJECT MANAGEMENT</p>
+
+        <button
+          className={`sidebar-link ${activeSection === "clients" ? "active" : ""}`}
+          onClick={() => {
+            setActiveSection("clients");
+            setSidebarOpen(false);
+          }}
+        >
+          Clients
+        </button>
+
+        <button
+          className={`sidebar-link ${activeSection === "projects" ? "active" : ""}`}
+          onClick={() => {
+            setActiveSection("projects");
+            setSidebarOpen(false);
+          }}
+        >
+          Projects
+        </button>
+
+        <div className="sidebar-bottom">
+          <p>{user?.full_name || "Team Member"}</p>
+          <span>{user?.role || "user"}</span>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              navigate("/");
+            }}
+          >
+            Log Out
+          </button>
+        </div>
+
+      </aside>
+
+      <main className="dashboard-main">
+        <div className="content-page">
 
       {/* Success / Error Message */}
       {message && (
@@ -275,21 +420,13 @@ function Content() {
         </div>
       )}
 
+      {activeSection === "content" && (
+        <>
       {/* Page Header */}
       <div className="content-header">
         <p className="content-eyebrow">INTERNAL CONTENT</p>
 
         <h1>Content Management</h1>
-
-        <button
-            onClick={() => {
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                navigate("/");
-            }}
-        >
-            Log Out
-        </button>
 
         <p className="content-intro">
           Manage Fevora's digital content, services, and published
@@ -571,7 +708,11 @@ function Content() {
         )}
 
       </div>
+      </>
+      )}
+      
       {/* Customer Requests */}
+      {activeSection === "requests" && (
       <div className="content-list-section"
       style={{ marginTop: "60px" }}>
 
@@ -769,8 +910,71 @@ function Content() {
         )}
 
       </div>
+      )}
+
+      {/* Other sidebar sections */}
+      {activeSection === "services" && <ServiceManagement />}
+
+      {activeSection === "clients" && (
+        <div className="content-list-section">
+          <div className="content-list-heading">
+            <div>
+              <p className="content-eyebrow">CUSTOMER DIRECTORY</p>
+              <h2>Client Management</h2>
+            </div>
+
+            <span className="content-count">
+              {clients.length} {clients.length === 1 ? "client" : "clients"}
+            </span>
+          </div>
+
+          {clientError ? (
+            <div className="empty-content">
+              <p>{clientError}</p>
+              <button onClick={fetchClients}>Try Again</button>
+            </div>
+          ) : clients.length === 0 ? (
+            <div className="empty-content">
+              <p>No registered clients found yet.</p>
+            </div>
+          ) : (
+            <div className="content-table-wrapper">
+              <table className="content-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Client Name</th>
+                    <th>Email</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {clients.map((client, index) => (
+                    <tr key={client.id}>
+                      <td className="content-number">{index + 1}</td>
+                      <td className="content-title-cell">
+                        <strong>{client.full_name}</strong>
+                      </td>
+                      <td>{client.email}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeSection === "projects" && <Projects />}
+      {activeSection === "landing" && (
+        <div className="admin-landing-preview">
+          <App />
+        </div>
+      )}
 
     </div>
+   </main>
+  </div>
   );
 }
 

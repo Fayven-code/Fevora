@@ -270,6 +270,19 @@ if (!hasUserId) {
   `);
 }
 
+// Add status column to contacts for admin request management
+const hasContactStatus = db
+  .prepare("PRAGMA table_info(contacts)")
+  .all()
+  .some((column) => column.name === "status");
+
+if (!hasContactStatus) {
+  db.exec(`
+    ALTER TABLE contacts
+    ADD COLUMN status TEXT NOT NULL DEFAULT 'Pending'
+  `);
+}
+
 // Test route
 app.get("/", (req, res) => {
   res.json({
@@ -964,6 +977,7 @@ app.get(
 );
 
 // Get customer requests with search and filtering - Admin only
+
 app.get(
   "/api/admin/requests",
   authenticateToken,
@@ -973,38 +987,62 @@ app.get(
       const { search, status, date } = req.query;
 
       let query = `
-        SELECT
-          requests.id,
-          requests.title,
-          requests.description,
-          requests.category,
-          requests.status,
-          requests.created_at,
-          requests.updated_at,
-          users.full_name,
-          users.email,
-          documents.id AS document_id,
-          documents.original_name AS document_name,
-          documents.file_name,
-          documents.file_type,
-          documents.file_size
-        FROM requests
-        JOIN users ON requests.user_id = users.id
-        LEFT JOIN documents ON documents.request_id = requests.id
+        SELECT *
+        FROM (
+          SELECT
+            requests.id AS id,
+            'request' AS source,
+            requests.title AS title,
+            requests.description AS description,
+            requests.category AS category,
+            requests.status AS status,
+            requests.created_at AS created_at,
+            requests.updated_at AS updated_at,
+            users.full_name AS full_name,
+            users.email AS email,
+            documents.id AS document_id,
+            documents.original_name AS document_name,
+            documents.file_name AS file_name,
+            documents.file_type AS file_type,
+            documents.file_size AS file_size
+          FROM requests
+          JOIN users ON requests.user_id = users.id
+          LEFT JOIN documents
+            ON documents.request_id = requests.id
+
+          UNION ALL
+
+          SELECT
+            -contacts.id AS id,
+            'inquiry' AS source,
+            contacts.subject AS title,
+            contacts.message AS description,
+            'General Inquiry' AS category,
+            contacts.status AS status,
+            contacts.created_at AS created_at,
+            contacts.created_at AS updated_at,
+            contacts.full_name AS full_name,
+            contacts.email AS email,
+            NULL AS document_id,
+            NULL AS document_name,
+            NULL AS file_name,
+            NULL AS file_type,
+            NULL AS file_size
+          FROM contacts
+        ) AS all_requests
         WHERE 1 = 1
       `;
 
       const params = [];
 
-      // Search by customer name, email, title, description, or category
       if (search && search.trim()) {
         query += `
           AND (
-            users.full_name LIKE ?
-            OR users.email LIKE ?
-            OR requests.title LIKE ?
-            OR requests.description LIKE ?
-            OR requests.category LIKE ?
+            full_name LIKE ?
+            OR email LIKE ?
+            OR title LIKE ?
+            OR description LIKE ?
+            OR category LIKE ?
           )
         `;
 
@@ -1019,25 +1057,26 @@ app.get(
         );
       }
 
-      // Filter by status
       if (status && status !== "All") {
-        query += ` AND requests.status = ?`;
+        query += ` AND status = ?`;
         params.push(status);
       }
 
       if (date) {
-        query += ` AND DATE(requests.created_at) = ?`;
+        query += ` AND DATE(created_at) = ?`;
         params.push(date);
       }
 
-      // Newest requests first
-      query += ` ORDER BY requests.created_at DESC`;
+      query += ` ORDER BY created_at DESC`;
 
       const requests = db.prepare(query).all(...params);
 
       res.json(requests);
     } catch (error) {
-      console.error("Error searching/filtering customer requests:", error);
+      console.error(
+        "Error fetching admin requests and inquiries:",
+        error
+      );
 
       res.status(500).json({
         error: "Unable to retrieve customer requests.",
@@ -1045,6 +1084,7 @@ app.get(
     }
   }
 );
+
 
 // Update customer request status - Admin only
 app.put(
@@ -1070,9 +1110,44 @@ app.put(
         });
       }
 
+      
+      const numericId = Number(requestId);
+
+      if (!Number.isInteger(numericId) || numericId === 0) {
+        return res.status(400).json({
+          error: "Invalid request ID.",
+        });
+      }
+
+      // Negative IDs represent public contact inquiries.
+      if (numericId < 0) {
+        const contactId = Math.abs(numericId);
+
+        const existingContact = db
+          .prepare("SELECT id FROM contacts WHERE id = ?")
+          .get(contactId);
+
+        if (!existingContact) {
+          return res.status(404).json({
+            error: "Inquiry not found.",
+          });
+        }
+
+        db.prepare(`
+          UPDATE contacts
+          SET status = ?
+          WHERE id = ?
+        `).run(status, contactId);
+
+        return res.json({
+          message: "Inquiry status updated successfully.",
+        });
+      }
+
+      // Positive IDs represent regular customer requests.
       const existingRequest = db
         .prepare("SELECT id FROM requests WHERE id = ?")
-        .get(requestId);
+        .get(numericId);
 
       if (!existingRequest) {
         return res.status(404).json({
@@ -1085,11 +1160,12 @@ app.put(
         SET status = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(status, requestId);
+      `).run(status, numericId);
 
       res.json({
         message: "Request status updated successfully.",
       });
+
     } catch (error) {
       console.error("Error updating request status:", error);
 
